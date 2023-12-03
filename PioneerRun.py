@@ -26,6 +26,17 @@ class PioneerRun(DifferentialRobot):
         self.map = Map()
         # self.map.show()
 
+        # plt.ion()  # enable real-time plotting
+        # plt.figure(1, figsize=(10, 4))
+        # xy_res = np.array(self.map.grid).shape
+        # plt.subplot(122)
+        # plt.imshow(self.map.grid, cmap="bone_r")
+        # plt.clim(-10, 10)
+        # plt.gca().set_xticks(np.arange(-0.5, xy_res[1], 1), minor=True)
+        # plt.gca().set_yticks(np.arange(-0.5, xy_res[0], 1), minor=True)
+        # plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
+        # plt.colorbar()
+
         steps = 1000
         self.data_predictions = np.zeros((steps,), dtype="f,f")
         self.data_measurements = np.zeros((steps,), dtype="f,f")
@@ -38,7 +49,7 @@ class PioneerRun(DifferentialRobot):
 
     def rotate(self):
         delta_theta = self.target["θ"] - self.p["θ"]
-        ic(delta_theta)
+        # ic(delta_theta)
 
         if abs(delta_theta) < 0.01:
             self.stop()
@@ -48,7 +59,7 @@ class PioneerRun(DifferentialRobot):
             delta_theta -= 2 * math.pi
         elif delta_theta < -math.pi:
             delta_theta += 2 * math.pi
-        ic(delta_theta)
+        # ic(delta_theta)
 
         # check signal of self.p["θ"] and delta_theta
         if self.p["θ"] * delta_theta < 0:
@@ -74,6 +85,7 @@ class PioneerRun(DifferentialRobot):
 
     def read_lidar(self):
         # lidar_values = self.lidar.getRangeImage()
+        # ic(self.lidarValues)
         angles = []
         distances = []
 
@@ -93,6 +105,13 @@ class PioneerRun(DifferentialRobot):
 
     def find_target(self):
         self.target = {"ix": None, "iy": None, "px": None, "py": None, "θ": None}
+
+        max_value = np.max(self.map.grid)
+        # ic(max_value)
+        min_value = np.min(self.map.grid)
+        # ic(min_value)
+        mean_value = np.mean(self.map.grid)
+        # ic(mean_value)
 
         for x in range(1, self.map.width - 1):
             for y in range(1, self.map.height - 1):
@@ -120,8 +139,8 @@ class PioneerRun(DifferentialRobot):
                         "θ": angle,
                         "avoiding": False,
                     }
-                    ic("Target found *************************************************")
-                    ic(self.target)
+                    # ic("Target found *************************************************")
+                    # ic(self.target)
                     return True
 
         return False
@@ -132,7 +151,7 @@ class PioneerRun(DifferentialRobot):
 
         # checks if the robot is close enough to the target
         if abs(delta_x) < 0.05 and abs(delta_y) < 0.05:
-            ic("Close enough to target")
+            # ic("Close enough to target")
             self.stop()
             self.state = "find_next_target"
             return True
@@ -161,13 +180,13 @@ class PioneerRun(DifferentialRobot):
                 )
                 / 10
             )
-            ic(left, right)
+            # ic(left, right)
 
             if left < right:
-                ic("avoiding obstacles at left")
+                # ic("avoiding obstacles at left")
                 angle = self.target["θ"] - math.pi / 4
             else:
-                ic("avoiding obstacles at right")
+                # ic("avoiding obstacles at right")
                 angle = self.target["θ"] + math.pi / 4
 
             # Calculate new coordinates
@@ -194,15 +213,15 @@ class PioneerRun(DifferentialRobot):
                 "avoiding": True,
             }
 
-            ic("avoiding obstacles")
+            # ic("avoiding obstacles")
             self.state = "rotate_to_target"
             return True
 
         # checks if target is already checked
         target_value = self.map.grid[self.target["ix"]][self.target["iy"]]
-        ic(self.target, target_value)
+        # ic(self.target, target_value)
         if target_value != 0 and not self.target["avoiding"]:
-            ic("**************************** Target already checked")
+            # ic("**************************** Target already checked")
             self.stop()
             self.state = "find_next_target"
             return True
@@ -224,29 +243,43 @@ class PioneerRun(DifferentialRobot):
 
         # # xy_resolution = 0.1  # x-y grid resolution
         # # occupancy_map, min_x, max_x, min_y, max_y, xy_resolution = generate_ray_casting_grid_map(ox, oy, xy_resolution, True)
-        # xy_res = np.array(self.map.grid).shape
-        # plt.figure(1, figsize=(10, 4))
+        # # xy_res = np.array(self.map.grid).shape
+        # # plt.ion()  # enable real-time plotting
+        # # plt.figure(1, figsize=(10, 4))
         # plt.subplot(122)
         # # plt.imshow(self.map.grid, cmap="PiYG_r")
         # plt.imshow(self.map.grid, cmap="bone_r")
         # # cmap = "binary" "PiYG_r" "PiYG_r" "bone" "bone_r" "RdYlGn_r"
-        # plt.clim(-10, 10)
-        # plt.gca().set_xticks(np.arange(-.5, xy_res[1], 1), minor=True)
-        # plt.gca().set_yticks(np.arange(-.5, xy_res[0], 1), minor=True)
+        # plt.clim(np.max(self.map.grid), np.min(self.map.grid))
+        # # plt.gca().set_xticks(np.arange(-0.5, xy_res[1], 1), minor=True)
+        # # plt.gca().set_yticks(np.arange(-0.5, xy_res[0], 1), minor=True)
         # plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
         # plt.colorbar()
-        # plt.subplot(121)
-        # plt.plot([oy, np.zeros(np.size(oy))], [ox, np.zeros(np.size(oy))], "ro-")
-        # plt.axis("equal")
-        # plt.plot(0.0, 0.0, "ob")
-        # plt.gca().set_aspect("equal", "box")
-        # bottom, top = plt.ylim()  # return the current y-lim
-        # plt.ylim((top, bottom))  # rescale y axis, to match the grid orientation
-        # plt.grid(True)
-        # plt.show()
+        # # plt.subplot(121)
+        # # plt.plot([oy, np.zeros(np.size(oy))], [ox, np.zeros(np.size(oy))], "ro-")
+        # # plt.axis("equal")
+        # # plt.plot(0.0, 0.0, "ob")
+        # # plt.gca().set_aspect("equal", "box")
+        # # bottom, top = plt.ylim()  # return the current y-lim
+        # # plt.ylim((top, bottom))  # rescale y axis, to match the grid orientation
+        # # plt.grid(True)
+        # # plt.ioff()
+        # # plt.clf()
+        # # plt.show()
+        # plt.pause(1 / 10000)
 
         match self.state:
             case "find_next_target":
+                # check current position index
+                iPosX = int(
+                    round((self.p["x"] - self.map.origin_x) / self.map.resolution)
+                )
+                iPosY = int(
+                    round((self.p["y"] - self.map.origin_y) / self.map.resolution)
+                )
+
+                # ic(iPosX, iPosY)
+
                 foundTarget = self.find_target()
                 if not foundTarget:
                     self.state = "stop"

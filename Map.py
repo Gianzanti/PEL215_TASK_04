@@ -3,63 +3,67 @@ from matplotlib import pyplot as plt
 import numpy as np
 from icecream import ic
 
+
 class Map(object):
-    """ 
+    """
     The Map class stores an occupancy grid as a two dimensional
-    numpy array. 
-    
+    numpy array.
+
     Public instance variables:
 
         width      --  Number of columns in the occupancy grid.
         height     --  Number of rows in the occupancy grid.
-        resolution --  Width of each grid square in meters. 
-        origin_x   --  Position of the grid cell (0,0) in 
+        resolution --  Width of each grid square in meters.
+        origin_x   --  Position of the grid cell (0,0) in
         origin_y   --    in the map coordinate system.
         grid       --  numpy array with height rows and width columns.
-        
-    
+
+
     Note that x increases with increasing column number and y increases
-    with increasing row number. 
+    with increasing row number.
     """
 
-    def __init__(self, origin_x=0.0, origin_y=0.0, resolution=.5, width=20, height=20):
-        """ Construct an empty occupancy grid.
-        
-        Arguments: origin_x, 
+    def __init__(self, origin_x=0, origin_y=0, resolution=0.5, width=22, height=22):
+        """Construct an empty occupancy grid.
+
+        Arguments: origin_x,
                    origin_y  -- The position of grid cell (0,0) in the
                                 map coordinate frame.
-                   resolution-- width and height of the grid cells 
+                   resolution-- width and height of the grid cells
                                 in meters.
-                   width, 
+                   width,
                    height    -- The grid will have height rows and width
                                 columns cells.  width is the size of
                                 the x-dimension and height is the size
                                 of the y-dimension.
-                                
-         The default arguments put (0,0) in the center of the grid. 
-                                
+
+         The default arguments put (0,0) in the center of the grid.
+
         """
         self.origin_x = origin_x
         self.origin_y = origin_y
         self.resolution = resolution
-        self.width = width + 1
-        self.height = height + 1
+        self.width = width
+        self.height = height
         self.grid = np.zeros((self.width, self.height))
         # default 0.5 -- [[0.5 for i in range(y_w)] for i in range(x_w)]
-        self.cost = {'free': math.log(0.35/0.65), 'occupied': math.log(0.65/0.35), 'unknown': math.log(1)}
+        self.cost = {
+            "free": math.log(0.35 / 0.65),
+            "occupied": math.log(0.65 / 0.35),
+            "unknown": math.log(1),
+        }
         # ic(self.cost)
 
-
     def set_cell(self, x, y, val):
-        """ Set the value of a cell in the grid. 
+        """Set the value of a cell in the grid.
 
-        Arguments: 
+        Arguments:
             x, y  - This is a point in the map coordinate frame.
             val   - This is the value that should be assigned to the
                     grid cell that contains (x,y).
 
         This would probably be a helpful method!  Feel free to throw out
-        point that land outside of the grid. 
+        point that land outside of the grid.
         """
         self.grid[y][x] = val
 
@@ -108,6 +112,8 @@ class Map(object):
         return points
 
     def set_occupancy_grid(self, ox, oy, position):
+        # ic(ox, oy)
+
         ox_adjusted = ox + position[0]
         oy_adjusted = oy + position[1]
         # ic(ox_adjusted, oy_adjusted)
@@ -117,24 +123,30 @@ class Map(object):
         # ic(iPosX, iPosY)
 
         cells = []
-        for (x, y) in zip(ox_adjusted, oy_adjusted):
+        for x, y in zip(ox_adjusted, oy_adjusted):
             ix = int(round((x - self.origin_x) / self.resolution))
             iy = int(round((y - self.origin_y) / self.resolution))
             # ic(ix, iy)
 
             if cells.count((ix, iy)) != 0:
                 continue
-            
-            cells.append((ix, iy))
-            
-            laser_beams = self.bresenham((iPosX, iPosY), (ix, iy))
-            
-            for laser_beam in laser_beams[:-1]:
-                if (laser_beam[0] < self.width and laser_beam[1] < self.height):
-                    self.grid[laser_beam[0]][laser_beam[1]] += self.cost['free']
 
-            if (ix < self.width and iy < self.height):
-                self.grid[ix][iy] += self.cost['occupied']
+            cells.append((ix, iy))
+
+            laser_beams = self.bresenham((iPosX, iPosY), (ix, iy))
+            # ic(laser_beams)
+
+            for laser_beam in laser_beams[:-1]:
+                if (
+                    laser_beam[0] < self.width
+                    and laser_beam[1] < self.height
+                    and laser_beam[0] >= 0
+                    and laser_beam[1] >= 0
+                ):
+                    self.grid[laser_beam[0]][laser_beam[1]] += self.cost["free"]
+
+            if ix < self.width and iy < self.height and ix >= 0 and iy >= 0:
+                self.grid[ix][iy] += self.cost["occupied"]
 
             # if (ix + 1 < self.width and iy + 1 < self.height):
             #     self.grid[ix + 1][iy] += math.log(self.cost['occupied']) # extend the occupied area
@@ -142,13 +154,13 @@ class Map(object):
             #     self.grid[ix + 1][iy + 1] += math.log(self.cost['occupied']) # extend the occupied area
 
     def show(self):
-        """ Display the grid. """
+        """Display the grid."""
         # ic(self.grid)
         plt.imshow(self.grid, cmap="PiYG_r")
 
         plt.clim(-100, 100)
-        plt.gca().set_xticks(np.arange(-.5, 0.1, 1), minor=True)
-        plt.gca().set_yticks(np.arange(-.5, 0.1, 1), minor=True)
+        plt.gca().set_xticks(np.arange(-0.5, 0.1, 1), minor=True)
+        plt.gca().set_yticks(np.arange(-0.5, 0.1, 1), minor=True)
         plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
         plt.colorbar()
 
