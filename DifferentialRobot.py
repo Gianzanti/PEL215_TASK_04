@@ -93,14 +93,14 @@ class DifferentialRobot(ABC):
         self.v['vr'] = 0
         self.v['ω'] = 0
 
-    def rotate_clockwise(self, speed):
+    def rotate_counterclockwise(self, speed):
         self.v["vl"] = - speed
         self.v["vl"] = self.v["vl"] if self.v["vl"] > -self.mat_rotate_speed else -self.mat_rotate_speed
         self.v["vr"] = speed
         self.v["vr"] = self.v["vr"] if self.v["vr"] < self.mat_rotate_speed else self.mat_rotate_speed
         self.v["ω"] = (self.robot_radius / self.l["x"]) * (self.v["vr"] - self.v["vl"])
 
-    def rotate_counterclockwise(self, speed):
+    def rotate_clockwise(self, speed):
         self.v["vl"] = speed
         self.v["vl"] = self.v["vl"] if self.v["vl"] < self.mat_rotate_speed else self.mat_rotate_speed
         self.v["vr"] = - speed

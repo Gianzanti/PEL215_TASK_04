@@ -42,11 +42,11 @@ class Map(object):
         self.origin_x = origin_x
         self.origin_y = origin_y
         self.resolution = resolution
-        self.width = width 
-        self.height = height 
-        self.grid = np.zeros((width, height))
+        self.width = width + 1
+        self.height = height + 1
+        self.grid = np.zeros((self.width, self.height))
         # default 0.5 -- [[0.5 for i in range(y_w)] for i in range(x_w)]
-        self.cost = {'free': 0.3/0.7, 'occupied': 0.7/0.3, 'unknown': 1}
+        self.cost = {'free': math.log(0.35/0.65), 'occupied': math.log(0.65/0.35), 'unknown': math.log(1)}
         # ic(self.cost)
 
 
@@ -131,10 +131,10 @@ class Map(object):
             
             for laser_beam in laser_beams[:-1]:
                 if (laser_beam[0] < self.width and laser_beam[1] < self.height):
-                    self.grid[laser_beam[0]][laser_beam[1]] += math.log(self.cost['free'])
+                    self.grid[laser_beam[0]][laser_beam[1]] += self.cost['free']
 
             if (ix < self.width and iy < self.height):
-                self.grid[ix][iy] += math.log(self.cost['occupied'])
+                self.grid[ix][iy] += self.cost['occupied']
 
             # if (ix + 1 < self.width and iy + 1 < self.height):
             #     self.grid[ix + 1][iy] += math.log(self.cost['occupied']) # extend the occupied area
