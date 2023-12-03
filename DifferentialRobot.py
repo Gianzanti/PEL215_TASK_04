@@ -51,6 +51,7 @@ class DifferentialRobot(ABC):
         self.lidar = self.me.getDevice("lidar")
         self.lidar.enable(self.timestep)
         self.lidar.enablePointCloud()
+        self.lidarValues = []
 
     def base_move(self):
         self.set_wheel_speeds()
@@ -121,6 +122,7 @@ class DifferentialRobot(ABC):
 
     def run(self):
         while self.me.step(self.timestep) != -1:
+            self.lidarValues = self.lidar.getRangeImage().copy()
             self.odometry()
             self.update()
             self.move()

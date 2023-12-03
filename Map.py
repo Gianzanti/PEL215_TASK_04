@@ -22,7 +22,7 @@ class Map(object):
     with increasing row number. 
     """
 
-    def __init__(self, origin_x=-1.0, origin_y=-1.0, resolution=.5, width=22, height=22):
+    def __init__(self, origin_x=0.0, origin_y=0.0, resolution=.5, width=20, height=20):
         """ Construct an empty occupancy grid.
         
         Arguments: origin_x, 
@@ -114,16 +114,15 @@ class Map(object):
 
         iPosX = int(round((position[0] - self.origin_x) / self.resolution))
         iPosY = int(round((position[1] - self.origin_y) / self.resolution))
-        ic(iPosX, iPosY)
+        # ic(iPosX, iPosY)
 
         cells = []
         for (x, y) in zip(ox_adjusted, oy_adjusted):
             ix = int(round((x - self.origin_x) / self.resolution))
             iy = int(round((y - self.origin_y) / self.resolution))
-            ic(ix, iy)
+            # ic(ix, iy)
 
             if cells.count((ix, iy)) != 0:
-                ic("continue")
                 continue
             
             cells.append((ix, iy))
@@ -131,12 +130,16 @@ class Map(object):
             laser_beams = self.bresenham((iPosX, iPosY), (ix, iy))
             
             for laser_beam in laser_beams[:-1]:
-                self.grid[laser_beam[0]][laser_beam[1]] += math.log(self.cost['free'])  # free area
+                if (laser_beam[0] < self.width and laser_beam[1] < self.height):
+                    self.grid[laser_beam[0]][laser_beam[1]] += math.log(self.cost['free'])
 
-            self.grid[ix][iy] += math.log(self.cost['occupied'])
-            self.grid[ix + 1][iy] += math.log(self.cost['occupied']) # extend the occupied area
-            self.grid[ix][iy + 1] += math.log(self.cost['occupied']) # extend the occupied area
-            self.grid[ix + 1][iy + 1] += math.log(self.cost['occupied']) # extend the occupied area
+            if (ix < self.width and iy < self.height):
+                self.grid[ix][iy] += math.log(self.cost['occupied'])
+
+            # if (ix + 1 < self.width and iy + 1 < self.height):
+            #     self.grid[ix + 1][iy] += math.log(self.cost['occupied']) # extend the occupied area
+            #     self.grid[ix][iy + 1] += math.log(self.cost['occupied']) # extend the occupied area
+            #     self.grid[ix + 1][iy + 1] += math.log(self.cost['occupied']) # extend the occupied area
 
     def show(self):
         """ Display the grid. """
