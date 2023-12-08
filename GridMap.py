@@ -4,7 +4,7 @@ import numpy as np
 from icecream import ic
 
 
-class Map(object):
+class GridMap(object):
     """
     The Map class stores an occupancy grid as a two dimensional
     numpy array.
@@ -23,29 +23,18 @@ class Map(object):
     with increasing row number.
     """
 
-    def __init__(self, origin_x=0, origin_y=0, resolution=0.5, width=22, height=22):
-        """Construct an empty occupancy grid.
-
-        Arguments: origin_x,
-                   origin_y  -- The position of grid cell (0,0) in the
-                                map coordinate frame.
-                   resolution-- width and height of the grid cells
-                                in meters.
-                   width,
-                   height    -- The grid will have height rows and width
-                                columns cells.  width is the size of
-                                the x-dimension and height is the size
-                                of the y-dimension.
-
-         The default arguments put (0,0) in the center of the grid.
-
-        """
+    def __init__(
+        self, origin_x=-0.5, origin_y=-0.5, resolution=0.5, width=22, height=22
+    ):
         self.origin_x = origin_x
         self.origin_y = origin_y
         self.resolution = resolution
         self.width = width
         self.height = height
         self.grid = np.zeros((self.width, self.height))
+        self.thresholdFree = -5000
+        self.thresholdOccupied = 3000
+
         # default 0.5 -- [[0.5 for i in range(y_w)] for i in range(x_w)]
         self.cost = {
             "free": math.log(0.35 / 0.65),
@@ -53,19 +42,6 @@ class Map(object):
             "unknown": math.log(1),
         }
         # ic(self.cost)
-
-    def set_cell(self, x, y, val):
-        """Set the value of a cell in the grid.
-
-        Arguments:
-            x, y  - This is a point in the map coordinate frame.
-            val   - This is the value that should be assigned to the
-                    grid cell that contains (x,y).
-
-        This would probably be a helpful method!  Feel free to throw out
-        point that land outside of the grid.
-        """
-        self.grid[y][x] = val
 
     def bresenham(self, start, end):
         """
@@ -95,9 +71,11 @@ class Map(object):
         dx = x2 - x1  # recalculate differentials
         dy = y2 - y1  # recalculate differentials
         error = int(dx / 2.0)  # calculate error
+        # error = dy - dx  # calculate error
         y_step = 1 if y1 < y2 else -1
         # iterate over bounding box generating points between start and end
         y = y1
+
         points = []
         for x in range(x1, x2 + 1):
             coord = [y, x] if is_steep else (x, y)
@@ -106,8 +84,10 @@ class Map(object):
             if error < 0:
                 y += y_step
                 error += dx
+
         if swapped:  # reverse the list if the coordinates were swapped
             points.reverse()
+
         points = np.array(points)
         return points
 
@@ -126,32 +106,39 @@ class Map(object):
         for x, y in zip(ox_adjusted, oy_adjusted):
             ix = int(round((x - self.origin_x) / self.resolution))
             iy = int(round((y - self.origin_y) / self.resolution))
-            # ic(ix, iy)
+            if ix > self.width or ix < 0 or iy > self.height or iy < 0:
+                continue
 
             if cells.count((ix, iy)) != 0:
                 continue
+            # ic(x, y)
+            # ic(ix, iy)
 
             cells.append((ix, iy))
 
             laser_beams = self.bresenham((iPosX, iPosY), (ix, iy))
             # ic(laser_beams)
 
-            for laser_beam in laser_beams[:-1]:
-                if (
-                    laser_beam[0] < self.width
-                    and laser_beam[1] < self.height
-                    and laser_beam[0] >= 0
-                    and laser_beam[1] >= 0
-                ):
-                    self.grid[laser_beam[0]][laser_beam[1]] += self.cost["free"]
+            for z in laser_beams[:-1]:
+                # ic("free", z)
+                if z[0] < self.width and z[1] < self.height and z[0] >= 0 and z[1] >= 0:
+                    self.grid[z[0]][z[1]] += self.cost["free"]
+                    if self.grid[z[0]][z[1]] < self.thresholdFree:
+                        self.grid[z[0]][z[1]] = self.thresholdFree
+                    # ic(self.grid[z[0]][z[1]])
+
+            # for z in laser_beams[-2:]:
+            #     ic("occupied", z)
+            #     if z[0] < self.width and z[1] < self.height and z[0] >= 0 and z[1] >= 0:
+            #         self.grid[z[0]][z[1]] += self.cost["occupied"]
+            #         ic(self.grid[z[0]][z[1]])
 
             if ix < self.width and iy < self.height and ix >= 0 and iy >= 0:
+                # ic("occupied", (ix, iy))
                 self.grid[ix][iy] += self.cost["occupied"]
-
-            # if (ix + 1 < self.width and iy + 1 < self.height):
-            #     self.grid[ix + 1][iy] += math.log(self.cost['occupied']) # extend the occupied area
-            #     self.grid[ix][iy + 1] += math.log(self.cost['occupied']) # extend the occupied area
-            #     self.grid[ix + 1][iy + 1] += math.log(self.cost['occupied']) # extend the occupied area
+                if self.grid[ix][iy] > self.thresholdOccupied:
+                    self.grid[ix][iy] = self.thresholdOccupied
+                # ic(self.grid[ix][iy])
 
     def show(self):
         """Display the grid."""

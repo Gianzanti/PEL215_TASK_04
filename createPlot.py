@@ -22,18 +22,20 @@ ic(min_value)
 mean_value = np.mean(data["grid"])
 ic(mean_value)
 
+# self.thresholdFree = -3000
+# self.thresholdOccupied = 500
 
 # Zero out the elements of the copied array
 new_grid.fill(0)
 
 for x in range(0, width):
     for y in range(0, height):
-        if data["grid"][x][y] >= 100:
-            new_grid[x][y] = 1
-        # elif data["grid"][x][y] < -2000:
-        #     new_grid[x][y] = -1
+        if data["grid"][x][y] >= (max_value * 0.3):
+            new_grid[x][y] = -10
+        elif data["grid"][x][y] < (min_value * 0.3):
+            new_grid[x][y] = 10
         else:
-            new_grid[x][y] = -1
+            new_grid[x][y] = 0
 
 ic(new_grid)
 
