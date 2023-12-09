@@ -23,19 +23,16 @@ class GridMap(object):
     with increasing row number.
     """
 
-    def __init__(
-        self, origin_x=-0.5, origin_y=-0.5, resolution=0.5, width=22, height=22
-    ):
+    def __init__(self, origin_x=0, origin_y=0, resolution=0.5, width=21, height=21):
         self.origin_x = origin_x
         self.origin_y = origin_y
         self.resolution = resolution
         self.width = width
         self.height = height
         self.grid = np.zeros((self.width, self.height))
-        self.thresholdFree = -5000
+        self.thresholdFree = -10000
         self.thresholdOccupied = 3000
 
-        # default 0.5 -- [[0.5 for i in range(y_w)] for i in range(x_w)]
         self.cost = {
             "free": math.log(0.35 / 0.65),
             "occupied": math.log(0.65 / 0.35),
@@ -92,40 +89,49 @@ class GridMap(object):
         return points
 
     def set_occupancy_grid(self, ox, oy, position):
-        # ic(ox, oy)
+        ic(ox, oy)
 
         ox_adjusted = ox + position[0]
         oy_adjusted = oy + position[1]
-        # ic(ox_adjusted, oy_adjusted)
+        ic(ox_adjusted, oy_adjusted)
 
+        ic(position)
         iPosX = int(round((position[0] - self.origin_x) / self.resolution))
         iPosY = int(round((position[1] - self.origin_y) / self.resolution))
-        # ic(iPosX, iPosY)
+        ic(iPosX, iPosY)
 
         cells = []
         for x, y in zip(ox_adjusted, oy_adjusted):
             ix = int(round((x - self.origin_x) / self.resolution))
             iy = int(round((y - self.origin_y) / self.resolution))
-            if ix > self.width or ix < 0 or iy > self.height or iy < 0:
-                continue
+            ic(x, y)
+            ic(ix, iy)
+
+            # if ix > self.width or ix < 0 or iy > self.height or iy < 0:
+            #     continue
 
             if cells.count((ix, iy)) != 0:
                 continue
-            # ic(x, y)
-            # ic(ix, iy)
+            ic(x, y)
+            ic(ix, iy)
 
             cells.append((ix, iy))
 
             laser_beams = self.bresenham((iPosX, iPosY), (ix, iy))
-            # ic(laser_beams)
+            ic(laser_beams)
 
             for z in laser_beams[:-1]:
-                # ic("free", z)
-                if z[0] < self.width and z[1] < self.height and z[0] >= 0 and z[1] >= 0:
+                ic("free", z)
+                if (
+                    z[0] <= self.width
+                    and z[1] <= self.height
+                    and z[0] >= 0
+                    and z[1] >= 0
+                ):
                     self.grid[z[0]][z[1]] += self.cost["free"]
                     if self.grid[z[0]][z[1]] < self.thresholdFree:
                         self.grid[z[0]][z[1]] = self.thresholdFree
-                    # ic(self.grid[z[0]][z[1]])
+                    ic(self.grid[z[0]][z[1]])
 
             # for z in laser_beams[-2:]:
             #     ic("occupied", z)
@@ -134,11 +140,11 @@ class GridMap(object):
             #         ic(self.grid[z[0]][z[1]])
 
             if ix < self.width and iy < self.height and ix >= 0 and iy >= 0:
-                # ic("occupied", (ix, iy))
+                ic("occupied", (ix, iy))
                 self.grid[ix][iy] += self.cost["occupied"]
                 if self.grid[ix][iy] > self.thresholdOccupied:
                     self.grid[ix][iy] = self.thresholdOccupied
-                # ic(self.grid[ix][iy])
+                ic(self.grid[ix][iy])
 
     def show(self):
         """Display the grid."""

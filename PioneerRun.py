@@ -100,17 +100,25 @@ class PioneerRun(DifferentialRobot):
         angles = []
         distances = []
 
-        for angle, measure in enumerate(self.lidarValues):
-            if measure == float("inf"):
-                measure = 5
-            angles.append(math.radians(angle) + self.p["θ"] + math.pi)
-            distances.append(float(measure))
+        # for angle, measure in enumerate(self.lidarValues):
+        #     if measure == float("inf"):
+        #         continue
+        #     angles.append(math.radians(angle) + self.p["θ"])
+        #     distances.append(float(measure))
+
+        angles.append(math.radians(0) + self.p["θ"])
+        measure = self.lidarValues[0]
+        # if measure == float("inf"):
+        #     continue
+        distances.append(float(measure))
 
         angles = np.array(angles)
         distances = np.array(distances)
 
         ox = np.sin(angles) * distances
         oy = np.cos(angles) * distances
+        # ox = ox + self.p["x"]
+        # oy = oy + self.p["y"]
 
         return ox, oy
 
@@ -122,9 +130,9 @@ class PioneerRun(DifferentialRobot):
         yy = int(round((self.p["y"] - self.map.origin_y) / self.map.resolution))
 
         cycleX = self.cyclic_range(xx, self.map.width - 1)
-        ic(cycleX)
+        # ic(cycleX)
         cycleY = self.cyclic_range(yy, self.map.height - 1)
-        ic(cycleY)
+        # ic(cycleY)
 
         for x in cycleX:
             for y in cycleY:
@@ -220,44 +228,27 @@ class PioneerRun(DifferentialRobot):
             return True
 
         # avoid obstacles
-        lim_inf = 160
-        lim_sup = 200
-        lim_half = 181
-        if min(self.lidarValues[lim_inf:lim_sup]) < 0.65:
-            # replace inf values with 5 in a list comprehension
-            left = (
-                sum(
-                    [
-                        5 if x == float("inf") else x
-                        for x in self.lidarValues[lim_inf:lim_half]
-                    ]
-                )
-                / 10
-            )
-            right = (
-                sum(
-                    [
-                        5 if x == float("inf") else x
-                        for x in self.lidarValues[lim_half:lim_sup]
-                    ]
-                )
-                / 10
-            )
-            # ic(left, right)
+        left_side = self.lidarValues[340:360]
+        right_side = self.lidarValues[0:20]
+        obstacle_left = min(left_side) < 0.65
+        obstacle_right = min(right_side) < 0.65
+        left_value = sum([5 if x == float("inf") else x for x in left_side]) / 10
+        right_value = sum([5 if x == float("inf") else x for x in right_side]) / 10
 
-            if left < right:
-                # ic("avoiding obstacles at left")
+        if obstacle_left or obstacle_right:
+            if left_value < right_value:
+                ic("avoiding obstacles at left")
                 angle = self.target["θ"] - math.pi / 4
             else:
-                # ic("avoiding obstacles at right")
+                ic("avoiding obstacles at right")
                 angle = self.target["θ"] + math.pi / 4
 
             # Calculate new coordinates
-            new_x = self.p["x"] + (random.random() * 3) * math.cos(angle)
-            new_x = new_x if (new_x <= 10) else 10
+            new_x = self.p["x"] + ((random.random() * 4) - 2) * math.cos(angle)
+            new_x = new_x if (new_x <= 9.5) else 9.5
             new_x = new_x if (new_x >= 1) else 1
-            new_y = self.p["y"] + (random.random() * 3) * math.sin(angle)
-            new_y = new_y if (new_y <= 10) else 10
+            new_y = self.p["y"] + ((random.random() * 4) - 2) * math.sin(angle)
+            new_y = new_y if (new_y <= 9.5) else 9.5
             new_y = new_y if (new_y >= 1) else 1
 
             iPosX = int(round((new_x - self.map.origin_x) / self.map.resolution))
@@ -331,6 +322,50 @@ class PioneerRun(DifferentialRobot):
         # # plt.clf()
         # # plt.show()
         # plt.pause(1 / 10000)
+
+        # Create a copy of the array
+        new_grid = self.map.grid.copy()
+
+        # Zero out the elements of the copied array
+        new_grid.fill(0)
+
+        for x in range(0, self.map.width):
+            for y in range(0, self.map.height):
+                if self.map.grid[x][y] > 0:
+                    new_grid[x][y] = 1
+                elif self.map.grid[x][y] < 0:
+                    new_grid[x][y] = -1
+                else:
+                    new_grid[x][y] = 0
+
+        xy_res = np.array(new_grid).shape
+        plt.figure(1, figsize=(10, 4))
+        plt.subplot(122)
+        plt.imshow(new_grid, cmap="bone_r")
+        plt.clim(-1, 1)
+        plt.gca().set_xticks(np.arange(-0.5, xy_res[1], 1), minor=True)
+        plt.gca().set_yticks(np.arange(-0.5, xy_res[0], 1), minor=True)
+        plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
+        plt.colorbar()
+        plt.subplot(121)
+
+        # ic(ox, oy)
+        ox_adjusted = ox + self.p["x"]
+        oy_adjusted = oy + self.p["y"]
+        # ic(ox_adjusted, oy_adjusted)
+
+        plt.plot(
+            [oy_adjusted, np.full((np.size(oy)), self.p["y"])],
+            [ox_adjusted, np.full((np.size(ox)), self.p["x"])],
+            "ro-",
+        )
+        plt.axis("equal")
+        plt.plot(self.p["x"], self.p["y"], "ob")
+        plt.gca().set_aspect("equal", "box")
+        # bottom, top = plt.ylim()  # return the current y-lim
+        # plt.ylim((top, bottom))  # rescale y axis, to match the grid orientation
+        plt.grid(True)
+        plt.show()
 
         match self.state:
             case "find_next_target":

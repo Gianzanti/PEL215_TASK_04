@@ -30,9 +30,9 @@ new_grid.fill(0)
 
 for x in range(0, width):
     for y in range(0, height):
-        if data["grid"][x][y] >= (max_value * 0.3):
+        if data["grid"][x][y] >= mean_value:  # (max_value * 0.1):
             new_grid[x][y] = -10
-        elif data["grid"][x][y] < (min_value * 0.3):
+        elif data["grid"][x][y] < mean_value:  # (max_value * 0.1):
             new_grid[x][y] = 10
         else:
             new_grid[x][y] = 0
@@ -44,7 +44,7 @@ xy_res = np.array(new_grid).shape
 plt.figure(1, figsize=(10, 4))
 plt.subplot(122)
 plt.imshow(new_grid, cmap="bone")
-plt.clim(-1, 1)
+plt.clim(-10, 10)
 plt.gca().set_xticks(np.arange(-0.5, xy_res[1], 1), minor=True)
 plt.gca().set_yticks(np.arange(-0.5, xy_res[0], 1), minor=True)
 plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
