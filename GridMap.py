@@ -23,7 +23,7 @@ class GridMap(object):
     with increasing row number.
     """
 
-    def __init__(self, origin_x=0, origin_y=0, resolution=0.5, width=21, height=21):
+    def __init__(self, origin_x=0, origin_y=0, resolution=0.5, width=20, height=20):
         self.origin_x = origin_x
         self.origin_y = origin_y
         self.resolution = resolution
@@ -88,33 +88,35 @@ class GridMap(object):
         points = np.array(points)
         return points
 
-    def set_occupancy_grid(self, ox, oy, position):
-        ic(ox, oy)
+    def calc_xy_index_from_pos(self, pos, lower_pos, max_index):
+        ind = int(np.floor((pos - lower_pos) / self.resolution))
+        if 0 <= ind <= max_index:
+            return ind
+        else:
+            return None
 
-        ox_adjusted = ox + position[0]
-        oy_adjusted = oy + position[1]
-        ic(ox_adjusted, oy_adjusted)
-
+    def set_occupancy_grid(self, laser_beams, position):
         ic(position)
-        iPosX = int(round((position[0] - self.origin_x) / self.resolution))
-        iPosY = int(round((position[1] - self.origin_y) / self.resolution))
+        iPosX = self.calc_xy_index_from_pos(position[0], self.origin_x, self.width)
+        iPosY = self.calc_xy_index_from_pos(position[1], self.origin_y, self.height)
         ic(iPosX, iPosY)
+        if (iPosX is None) or (iPosY is None):
+            ic("***************** Invalid position")
+            return
 
         cells = []
-        for x, y in zip(ox_adjusted, oy_adjusted):
-            ix = int(round((x - self.origin_x) / self.resolution))
-            iy = int(round((y - self.origin_y) / self.resolution))
-            ic(x, y)
-            ic(ix, iy)
-
-            # if ix > self.width or ix < 0 or iy > self.height or iy < 0:
-            #     continue
+        for beam in laser_beams:
+            ix = self.calc_xy_index_from_pos(beam[0], self.origin_x, self.width)
+            iy = self.calc_xy_index_from_pos(beam[1], self.origin_y, self.height)
+            if (ix is None) or (iy is None):
+                ic("***************** Invalid beam", beam)
+                continue
 
             if cells.count((ix, iy)) != 0:
                 continue
-            ic(x, y)
-            ic(ix, iy)
 
+            ic(ix, iy)
+            ic(beam)
             cells.append((ix, iy))
 
             laser_beams = self.bresenham((iPosX, iPosY), (ix, iy))
@@ -122,22 +124,11 @@ class GridMap(object):
 
             for z in laser_beams[:-1]:
                 ic("free", z)
-                if (
-                    z[0] <= self.width
-                    and z[1] <= self.height
-                    and z[0] >= 0
-                    and z[1] >= 0
-                ):
+                if z[0] < self.width and z[1] < self.height and z[0] >= 0 and z[1] >= 0:
                     self.grid[z[0]][z[1]] += self.cost["free"]
                     if self.grid[z[0]][z[1]] < self.thresholdFree:
                         self.grid[z[0]][z[1]] = self.thresholdFree
                     ic(self.grid[z[0]][z[1]])
-
-            # for z in laser_beams[-2:]:
-            #     ic("occupied", z)
-            #     if z[0] < self.width and z[1] < self.height and z[0] >= 0 and z[1] >= 0:
-            #         self.grid[z[0]][z[1]] += self.cost["occupied"]
-            #         ic(self.grid[z[0]][z[1]])
 
             if ix < self.width and iy < self.height and ix >= 0 and iy >= 0:
                 ic("occupied", (ix, iy))

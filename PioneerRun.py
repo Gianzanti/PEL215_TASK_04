@@ -5,6 +5,7 @@ import random
 from matplotlib import pyplot as plt
 from DifferentialRobot import DifferentialRobot
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 from icecream import ic
 from GridMap import GridMap
 
@@ -85,42 +86,32 @@ class PioneerRun(DifferentialRobot):
             self.rotate_clockwise(self.max_wheel_linear_speed)
             self.lastRotateDirection = "cw"
 
-        ox, oy = self.read_lidar()
-        self.map.set_occupancy_grid(ox, oy, [self.p["x"], self.p["y"]])
+        # ox, oy = self.read_lidar()
+        # self.map.set_occupancy_grid(ox, oy, [self.p["x"], self.p["y"]])
         return False
 
     def move(self):
         self.base_move()
 
     def odometry(self):
-        if self.state != "stop":
-            self.update_position()
+        # if self.state != "stop":
+        self.update_position()
 
     def read_lidar(self):
-        angles = []
-        distances = []
+        # a = np.array(self.rotation).reshape(3, 3)
+        r = R.from_matrix(np.array(self.rotation).reshape(3, 3))
+        # matrix = r.as_matrix()
+        # ic(matrix)
+        # ic(np.linalg.det(matrix))
 
-        # for angle, measure in enumerate(self.lidarValues):
-        #     if measure == float("inf"):
-        #         continue
-        #     angles.append(math.radians(angle) + self.p["θ"])
-        #     distances.append(float(measure))
+        # Create a single NumPy array from the list of objects
+        combined_array = np.vstack(
+            [[obj.x, obj.y, obj.z] for obj in self.lidarValues if obj.z == 0]
+        )
 
-        angles.append(math.radians(0) + self.p["θ"])
-        measure = self.lidarValues[0]
-        # if measure == float("inf"):
-        #     continue
-        distances.append(float(measure))
-
-        angles = np.array(angles)
-        distances = np.array(distances)
-
-        ox = np.sin(angles) * distances
-        oy = np.cos(angles) * distances
-        # ox = ox + self.p["x"]
-        # oy = oy + self.p["y"]
-
-        return ox, oy
+        tt = r.apply(combined_array)
+        tt = tt + self.position
+        return tt
 
     def cyclic_range(self, start, stop):
         return list(islice(cycle(range(stop)), start, start + stop))
@@ -227,50 +218,50 @@ class PioneerRun(DifferentialRobot):
             self.state = "find_next_target"
             return True
 
-        # avoid obstacles
-        left_side = self.lidarValues[340:360]
-        right_side = self.lidarValues[0:20]
-        obstacle_left = min(left_side) < 0.65
-        obstacle_right = min(right_side) < 0.65
-        left_value = sum([5 if x == float("inf") else x for x in left_side]) / 10
-        right_value = sum([5 if x == float("inf") else x for x in right_side]) / 10
+        # # avoid obstacles
+        # left_side = self.lidarValues[340:360]
+        # right_side = self.lidarValues[0:20]
+        # obstacle_left = min(left_side) < 0.65
+        # obstacle_right = min(right_side) < 0.65
+        # left_value = sum([5 if x == float("inf") else x for x in left_side]) / 10
+        # right_value = sum([5 if x == float("inf") else x for x in right_side]) / 10
 
-        if obstacle_left or obstacle_right:
-            if left_value < right_value:
-                ic("avoiding obstacles at left")
-                angle = self.target["θ"] - math.pi / 4
-            else:
-                ic("avoiding obstacles at right")
-                angle = self.target["θ"] + math.pi / 4
+        # if obstacle_left or obstacle_right:
+        #     if left_value < right_value:
+        #         ic("avoiding obstacles at left")
+        #         angle = self.target["θ"] - math.pi / 4
+        #     else:
+        #         ic("avoiding obstacles at right")
+        #         angle = self.target["θ"] + math.pi / 4
 
-            # Calculate new coordinates
-            new_x = self.p["x"] + ((random.random() * 4) - 2) * math.cos(angle)
-            new_x = new_x if (new_x <= 9.5) else 9.5
-            new_x = new_x if (new_x >= 1) else 1
-            new_y = self.p["y"] + ((random.random() * 4) - 2) * math.sin(angle)
-            new_y = new_y if (new_y <= 9.5) else 9.5
-            new_y = new_y if (new_y >= 1) else 1
+        #     # Calculate new coordinates
+        #     new_x = self.p["x"] + ((random.random() * 4) - 2) * math.cos(angle)
+        #     new_x = new_x if (new_x <= 9.5) else 9.5
+        #     new_x = new_x if (new_x >= 1) else 1
+        #     new_y = self.p["y"] + ((random.random() * 4) - 2) * math.sin(angle)
+        #     new_y = new_y if (new_y <= 9.5) else 9.5
+        #     new_y = new_y if (new_y >= 1) else 1
 
-            iPosX = int(round((new_x - self.map.origin_x) / self.map.resolution))
-            iPosY = int(round((new_y - self.map.origin_y) / self.map.resolution))
+        #     iPosX = int(round((new_x - self.map.origin_x) / self.map.resolution))
+        #     iPosY = int(round((new_y - self.map.origin_y) / self.map.resolution))
 
-            delta_x = new_x - self.p["x"]
-            delta_y = new_y - self.p["y"]
-            angle = math.atan2(delta_y, delta_x)
+        #     delta_x = new_x - self.p["x"]
+        #     delta_y = new_y - self.p["y"]
+        #     angle = math.atan2(delta_y, delta_x)
 
-            self.target = {
-                "ix": iPosX,
-                "iy": iPosY,
-                "px": new_x,
-                "py": new_y,
-                "θ": angle,
-                "avoiding": True,
-                "value": None,
-            }
+        #     self.target = {
+        #         "ix": iPosX,
+        #         "iy": iPosY,
+        #         "px": new_x,
+        #         "py": new_y,
+        #         "θ": angle,
+        #         "avoiding": True,
+        #         "value": None,
+        #     }
 
-            # ic("avoiding obstacles")
-            self.state = "rotate_to_target"
-            return True
+        #     # ic("avoiding obstacles")
+        #     self.state = "rotate_to_target"
+        #     return True
 
         # checks if target is already checked
         target_value = self.map.grid[self.target["ix"]][self.target["iy"]]
@@ -283,10 +274,10 @@ class PioneerRun(DifferentialRobot):
 
     def update(self):
         ic(self.state, self.target)
-        # ic(self.lidarValues)
 
-        ox, oy = self.read_lidar()
-        self.map.set_occupancy_grid(ox, oy, [self.p["x"], self.p["y"]])
+        laser_beams = self.read_lidar()
+        self.map.set_occupancy_grid(laser_beams, [self.p["x"], self.p["y"]])
+
         # ic(self.map.grid)
         #     np.savez_compressed(
         #         f"./data_kalman.npz",
@@ -324,47 +315,49 @@ class PioneerRun(DifferentialRobot):
         # plt.pause(1 / 10000)
 
         # Create a copy of the array
-        new_grid = self.map.grid.copy()
+        # new_grid = self.map.grid.copy()
 
-        # Zero out the elements of the copied array
-        new_grid.fill(0)
+        # # Zero out the elements of the copied array
+        # new_grid.fill(0)
 
-        for x in range(0, self.map.width):
-            for y in range(0, self.map.height):
-                if self.map.grid[x][y] > 0:
-                    new_grid[x][y] = 1
-                elif self.map.grid[x][y] < 0:
-                    new_grid[x][y] = -1
-                else:
-                    new_grid[x][y] = 0
+        # for x in range(0, self.map.width):
+        #     for y in range(0, self.map.height):
+        #         if self.map.grid[x][y] > 0:
+        #             new_grid[x][y] = 1
+        #         elif self.map.grid[x][y] < 0:
+        #             new_grid[x][y] = -1
+        #         else:
+        #             new_grid[x][y] = 0
 
-        xy_res = np.array(new_grid).shape
+        # xy_res = np.array(new_grid).shape
         plt.figure(1, figsize=(10, 4))
         plt.subplot(122)
-        plt.imshow(new_grid, cmap="bone_r")
-        plt.clim(-1, 1)
-        plt.gca().set_xticks(np.arange(-0.5, xy_res[1], 1), minor=True)
-        plt.gca().set_yticks(np.arange(-0.5, xy_res[0], 1), minor=True)
-        plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
-        plt.colorbar()
+        # plt.imshow(new_grid, cmap="bone_r")
+
+        plt.pcolor(self.map.grid, cmap="Blues")  # , vmin=0.0, vmax=1.0)
+        plt.axis("equal")
+
+        # return heat_map
+
+        # plt.clim(-1, 1)
+        # plt.gca().set_xticks(np.arange(-0.5, xy_res[1], 1), minor=True)
+        # plt.gca().set_yticks(np.arange(-0.5, xy_res[0], 1), minor=True)
+        # plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
+        # plt.colorbar()
         plt.subplot(121)
 
-        # ic(ox, oy)
-        ox_adjusted = ox + self.p["x"]
-        oy_adjusted = oy + self.p["y"]
-        # ic(ox_adjusted, oy_adjusted)
-
         plt.plot(
-            [oy_adjusted, np.full((np.size(oy)), self.p["y"])],
-            [ox_adjusted, np.full((np.size(ox)), self.p["x"])],
+            [laser_beams[:, 0], np.full(np.size(laser_beams[:, 0]), self.p["x"])],
+            [laser_beams[:, 1], np.full(np.size(laser_beams[:, 1]), self.p["y"])],
             "ro-",
         )
-        plt.axis("equal")
+
+        # plt.axis("equal")
         plt.plot(self.p["x"], self.p["y"], "ob")
         plt.gca().set_aspect("equal", "box")
         # bottom, top = plt.ylim()  # return the current y-lim
         # plt.ylim((top, bottom))  # rescale y axis, to match the grid orientation
-        plt.grid(True)
+        # plt.grid(True)
         plt.show()
 
         match self.state:
@@ -386,43 +379,43 @@ class PioneerRun(DifferentialRobot):
 
                     np.savez_compressed(f"./data_grid.npz", grid=self.map.grid)
 
-                    # Create a copy of the array
-                    new_grid = self.map.grid.copy()
+                    # # Create a copy of the array
+                    # new_grid = self.map.grid.copy()
 
-                    # Zero out the elements of the copied array
-                    new_grid.fill(0)
+                    # # Zero out the elements of the copied array
+                    # new_grid.fill(0)
 
-                    for x in range(0, self.map.width):
-                        for y in range(0, self.map.height):
-                            if self.map.grid[x][y] > 0:
-                                new_grid[x][y] = 1
-                            elif self.map.grid[x][y] < 0:
-                                new_grid[x][y] = -1
-                            else:
-                                new_grid[x][y] = 0
+                    # for x in range(0, self.map.width):
+                    #     for y in range(0, self.map.height):
+                    #         if self.map.grid[x][y] > 0:
+                    #             new_grid[x][y] = 1
+                    #         elif self.map.grid[x][y] < 0:
+                    #             new_grid[x][y] = -1
+                    #         else:
+                    #             new_grid[x][y] = 0
 
-                    xy_res = np.array(new_grid).shape
-                    plt.figure(1, figsize=(10, 4))
-                    plt.subplot(122)
-                    plt.imshow(new_grid, cmap="bone_r")
-                    plt.clim(-1, 1)
-                    plt.gca().set_xticks(np.arange(-0.5, xy_res[1], 1), minor=True)
-                    plt.gca().set_yticks(np.arange(-0.5, xy_res[0], 1), minor=True)
-                    plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
-                    plt.colorbar()
-                    plt.subplot(121)
-                    plt.plot(
-                        [oy, np.zeros(np.size(oy))], [ox, np.zeros(np.size(oy))], "ro-"
-                    )
-                    plt.axis("equal")
-                    plt.plot(0.0, 0.0, "ob")
-                    plt.gca().set_aspect("equal", "box")
-                    bottom, top = plt.ylim()  # return the current y-lim
-                    plt.ylim(
-                        (top, bottom)
-                    )  # rescale y axis, to match the grid orientation
-                    plt.grid(True)
-                    plt.show()
+                    # xy_res = np.array(new_grid).shape
+                    # plt.figure(1, figsize=(10, 4))
+                    # plt.subplot(122)
+                    # plt.imshow(new_grid, cmap="bone_r")
+                    # plt.clim(-1, 1)
+                    # plt.gca().set_xticks(np.arange(-0.5, xy_res[1], 1), minor=True)
+                    # plt.gca().set_yticks(np.arange(-0.5, xy_res[0], 1), minor=True)
+                    # plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
+                    # plt.colorbar()
+                    # plt.subplot(121)
+                    # plt.plot(
+                    #     [oy, np.zeros(np.size(oy))], [ox, np.zeros(np.size(oy))], "ro-"
+                    # )
+                    # plt.axis("equal")
+                    # plt.plot(0.0, 0.0, "ob")
+                    # plt.gca().set_aspect("equal", "box")
+                    # bottom, top = plt.ylim()  # return the current y-lim
+                    # plt.ylim(
+                    #     (top, bottom)
+                    # )  # rescale y axis, to match the grid orientation
+                    # plt.grid(True)
+                    # plt.show()
                     return
 
                 self.state = "rotate_to_target"

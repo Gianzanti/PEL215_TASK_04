@@ -31,6 +31,10 @@ class DifferentialRobot(ABC):
         self.wheels = {"left": None, "right": None}
         self.steps = 0
 
+        self.position = None
+        self.rotation = None
+        self.pose = None
+
         self.initMotors()
         self.initSensors()
 
@@ -60,15 +64,22 @@ class DifferentialRobot(ABC):
         )
 
     def update_position(self):
-        position = self.node.getPosition()
-        self.p["x"] = position[0]
-        self.p["y"] = position[1]
-        rotation = self.node.getOrientation()
-        θz = math.atan2(rotation[3], rotation[0])
+        self.pose = self.node.getPose().copy()
+        # ic(self.pose)
 
-        self.p["θ"] = np.arccos((rotation[0] + rotation[4] + rotation[8] - 1) / 2) * (
-            θz / abs(θz)
-        )
+        self.position = self.node.getPosition().copy()
+        ic(self.position)
+
+        self.p["x"] = self.position[0]
+        self.p["y"] = self.position[1]
+        self.rotation = self.node.getOrientation().copy()
+        # ic(self.rotation)
+
+        θz = math.atan2(self.rotation[3], self.rotation[0])
+
+        self.p["θ"] = np.arccos(
+            (self.rotation[0] + self.rotation[4] + self.rotation[8] - 1) / 2
+        ) * (θz / abs(θz))
 
         if self.p["θ"] < 0:
             self.p["θ"] += 2 * math.pi
@@ -156,8 +167,13 @@ class DifferentialRobot(ABC):
 
     def run(self):
         while self.me.step(self.timestep) != -1:
-            self.lidarValues = self.lidar.getRangeImage().copy()
             self.odometry()
+            self.lidarValues = self.lidar.getPointCloud().copy()
+            # for idx, t in enumerate(tt):
+            #     if t.z == 0:
+            #         ic(idx, t.x, t.y, t.z)
+
+            # self.lidarValues = self.lidar.getRangeImage().copy()
             self.update()
             self.move()
             self.steps += 1
