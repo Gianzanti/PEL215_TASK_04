@@ -30,12 +30,12 @@ ic(mean_value)
 
 # for x in range(0, width):
 #     for y in range(0, height):
-#         if data["grid"][x][y] >= mean_value:  # (max_value * 0.1):
+#         if data["grid"][x][y] > mean_value:
 #             new_grid[x][y] = -10
-#         elif data["grid"][x][y] < mean_value:  # (max_value * 0.1):
+#         elif data["grid"][x][y] < mean_value:
 #             new_grid[x][y] = 10
-#         else:
-#             new_grid[x][y] = 0
+#         # else:
+#         #     new_grid[x][y] = 10
 
 # ic(new_grid)
 
@@ -68,10 +68,10 @@ new_grid = np.fliplr(new_grid)
 plt.pcolor(
     new_grid,
     cmap="Blues",
-    edgecolor="w",
+    edgecolor="tab:gray",
     linewidths=1,
-    vmax=max_value * 0.2,
-    vmin=min_value * 0.8,
+    # vmax=max_value * 0.2,
+    # vmin=min_value * 0.8,
 )  # , vmin=0.0, vmax=1.0)
 plt.title("Occupancy Grid")
 plt.tight_layout()

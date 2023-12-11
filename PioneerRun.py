@@ -5,7 +5,7 @@ import random
 from matplotlib import pyplot as plt
 from DifferentialRobot import DifferentialRobot
 import numpy as np
-from scipy.spatial.transform import Rotation as R
+
 from icecream import ic
 from GridMap import GridMap
 
@@ -30,12 +30,12 @@ class PioneerRun(DifferentialRobot):
         self.map = GridMap()
         self.lastRotateDirection = None
         self.lastTargets = [None, None]
-        self.laser_beams = None
         self.predefined_targets = [
             {"x": 2, "y": 2},
-            {"x": 2, "y": 18},
             {"x": 18, "y": 18},
+            {"x": 2, "y": 18},
             {"x": 18, "y": 2},
+            {"x": 10, "y": 2},
             {"x": 10, "y": 10},
         ]
 
@@ -45,12 +45,17 @@ class PioneerRun(DifferentialRobot):
         # self.data_corrections = np.zeros((steps,), dtype="f,f")
 
     def get_target_angle(self, target):
-        delta_x = target["x"] - self.p["x"]
-        delta_y = target["y"] - self.p["y"]
-        return math.atan2(delta_y, delta_x)
+        delta_x = target["x"] - self.position[0]
+        delta_y = target["y"] - self.position[1]
+
+        theta = math.atan2(delta_y, delta_x)
+        if theta < 0:
+            theta += 2 * math.pi
+
+        return theta
 
     def rotate(self):
-        delta_theta = self.target["θ"] - self.p["θ"]
+        delta_theta = self.target["θ"] - self.theta
         # ic(delta_theta)
 
         if abs(delta_theta) < 0.01:
@@ -84,36 +89,29 @@ class PioneerRun(DifferentialRobot):
             self.lastRotateDirection = "cw"
 
         # ox, oy = self.read_lidar()
-        # self.map.set_occupancy_grid(ox, oy, [self.p["x"], self.p["y"]])
+        # self.map.set_occupancy_grid(ox, oy, [self.position[0], self.position[1]])
         return False
 
     def move(self):
-        self.base_move()
+        self.set_wheel_speeds()
 
     def odometry(self):
         # if self.state != "stop":
         self.update_position()
 
-    def read_lidar(self):
-        r = R.from_matrix(np.array(self.rotation).reshape(3, 3))
-        # Create a single NumPy array from the list of objects
-        combined_array = np.vstack(
-            [[obj.x, obj.y, obj.z] for obj in self.lidarValues if obj.z == 0]
-        )
-
-        tt = r.apply(combined_array)
-        tt = tt + self.position
-        return tt
+    # def read_lidar(self):
+    #     r = R.from_matrix(np.array(self.rotationMatrix).reshape(3, 3))
+    #     return r.apply(self.lidarValues) + self.position
 
     def cyclic_range(self, start, stop):
         return list(islice(cycle(range(stop)), start, start + stop))
 
     def find_target(self):
         xx = self.map.calc_xy_index_from_pos(
-            self.p["x"], self.map.origin_x, self.map.width
+            self.position[0], self.map.origin_x, self.map.width
         )
         yy = self.map.calc_xy_index_from_pos(
-            self.p["y"], self.map.origin_y, self.map.height
+            self.position[1], self.map.origin_y, self.map.height
         )
 
         cycleX = self.cyclic_range(xx, self.map.width - 1)
@@ -129,9 +127,11 @@ class PioneerRun(DifferentialRobot):
                 ):
                     posX = x * self.map.resolution + self.map.origin_x
                     posY = y * self.map.resolution + self.map.origin_y
-                    delta_x = posX - self.p["x"]
-                    delta_y = posY - self.p["y"]
+                    delta_x = posX - self.position[0]
+                    delta_y = posY - self.position[1]
                     angle = math.atan2(delta_y, delta_x)
+                    if angle < 0:
+                        angle += 2 * math.pi
 
                     self.target = {
                         "ix": x,
@@ -155,9 +155,11 @@ class PioneerRun(DifferentialRobot):
             predefined = self.predefined_targets[0]
             posX = predefined["x"] * self.map.resolution + self.map.origin_x
             posY = predefined["y"] * self.map.resolution + self.map.origin_y
-            delta_x = posX - self.p["x"]
-            delta_y = posY - self.p["y"]
+            delta_x = posX - self.position[0]
+            delta_y = posY - self.position[1]
             angle = math.atan2(delta_y, delta_x)
+            if angle < 0:
+                angle += 2 * math.pi
 
             self.target = {
                 "ix": predefined["x"],
@@ -207,8 +209,8 @@ class PioneerRun(DifferentialRobot):
 
         #     posX = target["x"] * self.map.resolution + self.map.origin_x
         #     posY = target["y"] * self.map.resolution + self.map.origin_y
-        #     delta_x = posX - self.p["x"]
-        #     delta_y = posY - self.p["y"]
+        #     delta_x = posX - self.position[0]
+        #     delta_y = posY - self.position[1]
         #     angle = math.atan2(delta_y, delta_x)
 
         #     self.target = {
@@ -229,8 +231,8 @@ class PioneerRun(DifferentialRobot):
         return False
 
     def follow_target(self):
-        delta_x = self.target["px"] - self.p["x"]
-        delta_y = self.target["py"] - self.p["y"]
+        delta_x = self.target["px"] - self.position[0]
+        delta_y = self.target["py"] - self.position[1]
 
         # checks if the robot is close enough to the target
         if abs(delta_x) < 0.05 and abs(delta_y) < 0.05:
@@ -242,43 +244,41 @@ class PioneerRun(DifferentialRobot):
             return True
 
         # avoid obstacles
-        left_side = self.lidarDistances[160:180]
-        right_side = self.lidarDistances[180:200]
-        obstacle_left = min(left_side) < 0.65
-        obstacle_right = min(right_side) < 0.65
-        left_value = sum([5 if x == float("inf") else x for x in left_side]) / 10
-        right_value = sum([5 if x == float("inf") else x for x in right_side]) / 10
+        left_side = self.lidarDistances[150:180]
+        right_side = self.lidarDistances[180:210]
+        obstacle_left = min(left_side) <= 0.4
+        obstacle_right = min(right_side) <= 0.4
+        left_value = sum(
+            [len(left_side) if x == float("inf") else x for x in left_side]
+        ) / len(left_side)
+        right_value = sum(
+            [len(right_side) if x == float("inf") else x for x in right_side]
+        ) / len(right_side)
 
         if obstacle_left or obstacle_right:
             if left_value < right_value:
                 ic("avoiding obstacles at left")
-                angle = self.target["θ"] - math.pi / 6
+                angle = self.theta - math.pi / 4
             else:
                 ic("avoiding obstacles at right")
-                angle = self.target["θ"] + math.pi / 6
+                angle = self.theta + math.pi / 4
 
             # Calculate new coordinates
-            new_x = self.p["x"] + ((random.random() * 3) - 2) * math.cos(angle)
-            new_x = new_x if (new_x <= 9.5) else 9.5
-            new_x = new_x if (new_x >= 1) else 1
-            new_y = self.p["y"] + ((random.random() * 3) - 2) * math.sin(angle)
-            new_y = new_y if (new_y <= 9.5) else 9.5
-            new_y = new_y if (new_y >= 1) else 1
+            iPos = None
+            while iPos == None:
+                new_x = self.position[0] + ((random.random() * 2) * math.cos(angle))
+                new_y = self.position[1] + ((random.random() * 2) * math.sin(angle))
+                iPos = self.map.get_xy_index_from_pos([new_x, new_y])
 
-            iPosX = self.map.calc_xy_index_from_pos(
-                new_x, self.map.origin_x, self.map.width
-            )
-            iPosY = self.map.calc_xy_index_from_pos(
-                new_y, self.map.origin_y, self.map.height
-            )
-
-            delta_x = new_x - self.p["x"]
-            delta_y = new_y - self.p["y"]
+            delta_x = new_x - self.position[0]
+            delta_y = new_y - self.position[1]
             angle = math.atan2(delta_y, delta_x)
+            if angle < 0:
+                angle += 2 * math.pi
 
             self.target = {
-                "ix": iPosX,
-                "iy": iPosY,
+                "ix": iPos[0],
+                "iy": iPos[1],
                 "px": new_x,
                 "py": new_y,
                 "θ": angle,
@@ -291,24 +291,27 @@ class PioneerRun(DifferentialRobot):
             self.state = "rotate_to_target"
             return True
 
-        # checks if target is already checked
-        target_value = self.map.grid[self.target["ix"]][self.target["iy"]]
-        # ic(self.target, target_value)
-        if (
-            target_value != self.target["value"]
-            and not self.target["avoiding"]
-            and not self.target["pre"]
-        ):
-            ic("**************************** Target already checked")
-            self.stop()
-            self.state = "find_next_target"
-            return True
+        # # checks if target is already checked
+        # target_value = self.map.grid[self.target["ix"]][self.target["iy"]]
+        # # ic(self.target, target_value)
+        # if (
+        #     target_value != self.target["value"]
+        #     and not self.target["avoiding"]
+        #     and not self.target["pre"]
+        # ):
+        #     ic("**************************** Target already checked")
+        #     self.stop()
+        #     self.state = "find_next_target"
+        #     return True
 
     def update(self):
         ic(self.state, self.target)
+        self.update_sensors()
 
-        self.laser_beams = self.read_lidar()
-        self.map.set_occupancy_grid(self.laser_beams, [self.p["x"], self.p["y"]])
+        # self.laser_beams = self.read_lidar()
+        self.map.set_occupancy_grid(
+            self.lidarValues, [self.position[0], self.position[1]]
+        )
 
         np.savez_compressed(f"./data_history.npz", grid=self.map.grid)
 
@@ -337,16 +340,16 @@ class PioneerRun(DifferentialRobot):
         #     plt.plot(
         #         [
         #             self.laser_beams[:, 0],
-        #             np.full(np.size(self.laser_beams[:, 0]), self.p["x"]),
+        #             np.full(np.size(self.laser_beams[:, 0]), self.position[0]),
         #         ],
         #         [
         #             self.laser_beams[:, 1],
-        #             np.full(np.size(self.laser_beams[:, 1]), self.p["y"]),
+        #             np.full(np.size(self.laser_beams[:, 1]), self.position[1]),
         #         ],
         #         "ro-",
         #     )
 
-        #     plt.plot(self.p["x"], self.p["y"], "ob")
+        #     plt.plot(self.position[0], self.position[1], "ob")
         #     plt.gca().set_aspect("equal", "box")
         #     plt.show()
 
@@ -354,10 +357,10 @@ class PioneerRun(DifferentialRobot):
             case "find_next_target":
                 # # check current position index
                 # iPosX = int(
-                #     round((self.p["x"] - self.map.origin_x) / self.map.resolution)
+                #     round((self.position[0] - self.map.origin_x) / self.map.resolution)
                 # )
                 # iPosY = int(
-                #     round((self.p["y"] - self.map.origin_y) / self.map.resolution)
+                #     round((self.position[1] - self.map.origin_y) / self.map.resolution)
                 # )
 
                 # # ic(iPosX, iPosY)
@@ -415,22 +418,22 @@ class PioneerRun(DifferentialRobot):
 
                     # return heat_map
 
-                    plt.subplot(121)
+                    # plt.subplot(121)
 
-                    plt.plot(
-                        [
-                            self.laser_beams[:, 0],
-                            np.full(np.size(self.laser_beams[:, 0]), self.p["x"]),
-                        ],
-                        [
-                            self.laser_beams[:, 1],
-                            np.full(np.size(self.laser_beams[:, 1]), self.p["y"]),
-                        ],
-                        "ro-",
-                    )
+                    # plt.plot(
+                    #     [
+                    #         self.laser_beams[:, 0],
+                    #         np.full(np.size(self.laser_beams[:, 0]), self.position[0]),
+                    #     ],
+                    #     [
+                    #         self.laser_beams[:, 1],
+                    #         np.full(np.size(self.laser_beams[:, 1]), self.position[1]),
+                    #     ],
+                    #     "ro-",
+                    # )
 
-                    plt.plot(self.p["x"], self.p["y"], "ob")
-                    plt.gca().set_aspect("equal", "box")
+                    # plt.plot(self.position[0], self.position[1], "ob")
+                    # plt.gca().set_aspect("equal", "box")
                     plt.show()
                     return
 

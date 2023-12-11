@@ -23,15 +23,15 @@ class GridMap(object):
     with increasing row number.
     """
 
-    def __init__(self, origin_x=0, origin_y=0, resolution=0.5, width=20, height=20):
+    def __init__(self, origin_x=0, origin_y=0, resolution=0.25, width=40, height=40):
         self.origin_x = origin_x
         self.origin_y = origin_y
         self.resolution = resolution
         self.width = width
         self.height = height
         self.grid = np.zeros((self.width, self.height))
-        self.thresholdFree = -3000
-        self.thresholdOccupied = 3000
+        self.thresholdFree = -4000
+        self.thresholdOccupied = 4000
 
         self.cost = {
             "free": math.log(0.35 / 0.65),
@@ -95,47 +95,51 @@ class GridMap(object):
         else:
             return None
 
-    def set_occupancy_grid(self, laser_beams, position):
-        # ic(position)
-        iPosX = self.calc_xy_index_from_pos(position[0], self.origin_x, self.width)
-        iPosY = self.calc_xy_index_from_pos(position[1], self.origin_y, self.height)
-        # ic(iPosX, iPosY)
-        if (iPosX is None) or (iPosY is None):
+    def get_xy_index_from_pos(self, pos):
+        indx = int(np.floor((pos[0] - self.origin_x) / self.resolution))
+        indy = int(np.floor((pos[1] - self.origin_y) / self.resolution))
+        if (0 <= indx < self.width) and (0 <= indy < self.height):
+            return (indx, indy)
+        else:
+            return None
+
+    def setCell(self, idx, val, max_value=None, min_value=None):
+        try:
+            current = self.grid[idx[0]][idx[1]] + val
+            if min_value is not None and current < min_value:
+                current = min_value
+
+            if max_value is not None and current > max_value:
+                current = max_value
+
+            self.grid[idx[0]][idx[1]] = current
+
+        except ValueError:
+            ic("***************** Invalid Cell")
+            pass
+
+    def set_occupancy_grid(self, lidar, position):
+        iPos = self.get_xy_index_from_pos(position)
+        if iPos is None:
             ic("***************** Invalid position")
             return
 
         cells = []
-        for beam in laser_beams:
-            ix = self.calc_xy_index_from_pos(beam[0], self.origin_x, self.width)
-            iy = self.calc_xy_index_from_pos(beam[1], self.origin_y, self.height)
-            if (ix is None) or (iy is None):
-                # ic("***************** Invalid beam", beam)
+        for beam in lidar:
+            idx = self.get_xy_index_from_pos((beam[0], beam[1]))
+            if idx is None:
                 continue
 
-            if cells.count((ix, iy)) != 0:
+            if cells.count(idx) > 0:
                 continue
 
-            # ic(ix, iy)
-            # ic(beam)
-            cells.append((ix, iy))
+            cells.append(idx)
 
-            laser_beams = self.bresenham((iPosX, iPosY), (ix, iy))
-            # ic(laser_beams)
+            line_path = self.bresenham(iPos, idx)
+            for z in line_path[:-1]:
+                self.setCell(z, self.cost["free"], min_value=self.thresholdFree)
 
-            for z in laser_beams[:-1]:
-                # ic("free", z)
-                if z[0] < self.width and z[1] < self.height and z[0] >= 0 and z[1] >= 0:
-                    self.grid[z[0]][z[1]] += self.cost["free"]
-                    if self.grid[z[0]][z[1]] < self.thresholdFree:
-                        self.grid[z[0]][z[1]] = self.thresholdFree
-                    # ic(self.grid[z[0]][z[1]])
-
-            if ix < self.width and iy < self.height and ix >= 0 and iy >= 0:
-                # ic("occupied", (ix, iy))
-                self.grid[ix][iy] += self.cost["occupied"]
-                if self.grid[ix][iy] > self.thresholdOccupied:
-                    self.grid[ix][iy] = self.thresholdOccupied
-                # ic(self.grid[ix][iy])
+            self.setCell(idx, self.cost["occupied"], max_value=self.thresholdOccupied)
 
     def show(self):
         """Display the grid."""
