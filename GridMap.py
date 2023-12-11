@@ -30,7 +30,7 @@ class GridMap(object):
         self.width = width
         self.height = height
         self.grid = np.zeros((self.width, self.height))
-        self.thresholdFree = -10000
+        self.thresholdFree = -3000
         self.thresholdOccupied = 3000
 
         self.cost = {
@@ -96,10 +96,10 @@ class GridMap(object):
             return None
 
     def set_occupancy_grid(self, laser_beams, position):
-        ic(position)
+        # ic(position)
         iPosX = self.calc_xy_index_from_pos(position[0], self.origin_x, self.width)
         iPosY = self.calc_xy_index_from_pos(position[1], self.origin_y, self.height)
-        ic(iPosX, iPosY)
+        # ic(iPosX, iPosY)
         if (iPosX is None) or (iPosY is None):
             ic("***************** Invalid position")
             return
@@ -109,33 +109,33 @@ class GridMap(object):
             ix = self.calc_xy_index_from_pos(beam[0], self.origin_x, self.width)
             iy = self.calc_xy_index_from_pos(beam[1], self.origin_y, self.height)
             if (ix is None) or (iy is None):
-                ic("***************** Invalid beam", beam)
+                # ic("***************** Invalid beam", beam)
                 continue
 
             if cells.count((ix, iy)) != 0:
                 continue
 
-            ic(ix, iy)
-            ic(beam)
+            # ic(ix, iy)
+            # ic(beam)
             cells.append((ix, iy))
 
             laser_beams = self.bresenham((iPosX, iPosY), (ix, iy))
-            ic(laser_beams)
+            # ic(laser_beams)
 
             for z in laser_beams[:-1]:
-                ic("free", z)
+                # ic("free", z)
                 if z[0] < self.width and z[1] < self.height and z[0] >= 0 and z[1] >= 0:
                     self.grid[z[0]][z[1]] += self.cost["free"]
                     if self.grid[z[0]][z[1]] < self.thresholdFree:
                         self.grid[z[0]][z[1]] = self.thresholdFree
-                    ic(self.grid[z[0]][z[1]])
+                    # ic(self.grid[z[0]][z[1]])
 
             if ix < self.width and iy < self.height and ix >= 0 and iy >= 0:
-                ic("occupied", (ix, iy))
+                # ic("occupied", (ix, iy))
                 self.grid[ix][iy] += self.cost["occupied"]
                 if self.grid[ix][iy] > self.thresholdOccupied:
                     self.grid[ix][iy] = self.thresholdOccupied
-                ic(self.grid[ix][iy])
+                # ic(self.grid[ix][iy])
 
     def show(self):
         """Display the grid."""

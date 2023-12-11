@@ -68,7 +68,7 @@ class DifferentialRobot(ABC):
         # ic(self.pose)
 
         self.position = self.node.getPosition().copy()
-        ic(self.position)
+        # ic(self.position)
 
         self.p["x"] = self.position[0]
         self.p["y"] = self.position[1]
@@ -168,12 +168,8 @@ class DifferentialRobot(ABC):
     def run(self):
         while self.me.step(self.timestep) != -1:
             self.odometry()
+            self.lidarDistances = self.lidar.getRangeImage().copy()
             self.lidarValues = self.lidar.getPointCloud().copy()
-            # for idx, t in enumerate(tt):
-            #     if t.z == 0:
-            #         ic(idx, t.x, t.y, t.z)
-
-            # self.lidarValues = self.lidar.getRangeImage().copy()
             self.update()
             self.move()
             self.steps += 1

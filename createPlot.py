@@ -7,6 +7,7 @@ from icecream import ic
 
 # load data from npz
 data = np.load("data_grid.npz")
+# data = np.load("data_history.npz")
 ic(data.files)
 ic(data["grid"])
 
@@ -18,7 +19,6 @@ max_value = np.max(data["grid"])
 ic(max_value)
 min_value = np.min(data["grid"])
 ic(min_value)
-
 mean_value = np.mean(data["grid"])
 ic(mean_value)
 
@@ -26,35 +26,54 @@ ic(mean_value)
 # self.thresholdOccupied = 500
 
 # Zero out the elements of the copied array
-new_grid.fill(0)
+# new_grid.fill(0)
 
-for x in range(0, width):
-    for y in range(0, height):
-        if data["grid"][x][y] >= mean_value:  # (max_value * 0.1):
-            new_grid[x][y] = -10
-        elif data["grid"][x][y] < mean_value:  # (max_value * 0.1):
-            new_grid[x][y] = 10
-        else:
-            new_grid[x][y] = 0
+# for x in range(0, width):
+#     for y in range(0, height):
+#         if data["grid"][x][y] >= mean_value:  # (max_value * 0.1):
+#             new_grid[x][y] = -10
+#         elif data["grid"][x][y] < mean_value:  # (max_value * 0.1):
+#             new_grid[x][y] = 10
+#         else:
+#             new_grid[x][y] = 0
 
-ic(new_grid)
+# ic(new_grid)
 
 
-xy_res = np.array(new_grid).shape
-plt.figure(1, figsize=(10, 4))
-plt.subplot(122)
-plt.imshow(new_grid, cmap="bone")
-plt.clim(-10, 10)
-plt.gca().set_xticks(np.arange(-0.5, xy_res[1], 1), minor=True)
-plt.gca().set_yticks(np.arange(-0.5, xy_res[0], 1), minor=True)
-plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
-plt.colorbar()
-# plt.subplot(121)
-# plt.plot([oy, np.zeros(np.size(oy))], [ox, np.zeros(np.size(oy))], "ro-")
-# plt.axis("equal")
-# plt.plot(0.0, 0.0, "ob")
-# plt.gca().set_aspect("equal", "box")
-# bottom, top = plt.ylim()  # return the current y-lim
-# plt.ylim((top, bottom))  # rescale y axis, to match the grid orientation
-# plt.grid(True)
+# xy_res = np.array(new_grid).shape
+# plt.figure(1, figsize=(10, 4))
+# plt.subplot(122)
+# plt.imshow(new_grid, cmap="bone")
+# plt.clim(-10, 10)
+# plt.gca().set_xticks(np.arange(-0.5, xy_res[1], 1), minor=True)
+# plt.gca().set_yticks(np.arange(-0.5, xy_res[0], 1), minor=True)
+# plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
+# plt.colorbar()
+# # plt.subplot(121)
+# # plt.plot([oy, np.zeros(np.size(oy))], [ox, np.zeros(np.size(oy))], "ro-")
+# # plt.axis("equal")
+# # plt.plot(0.0, 0.0, "ob")
+# # plt.gca().set_aspect("equal", "box")
+# # bottom, top = plt.ylim()  # return the current y-lim
+# # plt.ylim((top, bottom))  # rescale y axis, to match the grid orientation
+# # plt.grid(True)
+# plt.show()
+
+
+# plt.figure(1, figsize=(10, 4))
+# plt.subplot(122)
+# plt.imshow(new_grid, cmap="bone_r")
+new_grid = np.rot90(new_grid, k=3)
+new_grid = np.fliplr(new_grid)
+plt.pcolor(
+    new_grid,
+    cmap="Blues",
+    edgecolor="w",
+    linewidths=1,
+    vmax=max_value * 0.2,
+    vmin=min_value * 0.8,
+)  # , vmin=0.0, vmax=1.0)
+plt.title("Occupancy Grid")
+plt.tight_layout()
+plt.axis("equal")
 plt.show()
