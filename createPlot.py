@@ -8,12 +8,12 @@ from icecream import ic
 # load data from npz
 data = np.load("data_grid.npz")
 # data = np.load("data_history.npz")
-ic(data.files)
-ic(data["grid"])
+# ic(data.files)
+# ic(data["grid"])
 
-new_grid = data["grid"].copy()
-width = new_grid.shape[0]
-height = new_grid.shape[1]
+# new_grid = data["grid"].copy()
+# width = new_grid.shape[0]
+# height = new_grid.shape[1]
 
 max_value = np.max(data["grid"])
 ic(max_value)
@@ -63,17 +63,31 @@ ic(mean_value)
 # plt.figure(1, figsize=(10, 4))
 # plt.subplot(122)
 # plt.imshow(new_grid, cmap="bone_r")
-new_grid = np.rot90(new_grid, k=3)
+
+fig, ax = plt.subplots(1, 1, figsize=(20, 6))
+
+ax.set_ylabel("Posição Y [0.25 m cada]")
+ax.set_xlabel("Posição X [0.25 m cada]")
+ax.set_title("Grid de Ocupação", fontsize=14)
+
+# ax.set_xlim(-5, 5)
+# ax.set_ylim(0, 6)
+ax.set_aspect("equal", "box")
+# ax.tight_layout()
+# ax.grid()
+
+
+new_grid = np.rot90(data["grid"], k=3)
 new_grid = np.fliplr(new_grid)
-plt.pcolor(
+ax.pcolor(
     new_grid,
-    cmap="Blues",
+    cmap="bone_r",
     edgecolor="tab:gray",
     linewidths=1,
     # vmax=max_value * 0.2,
     # vmin=min_value * 0.8,
 )  # , vmin=0.0, vmax=1.0)
-plt.title("Occupancy Grid")
-plt.tight_layout()
-plt.axis("equal")
+# plt.title("Occupancy Grid")
+# plt.tight_layout()
+# plt.axis("equal")
 plt.show()

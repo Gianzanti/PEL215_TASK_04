@@ -1,28 +1,9 @@
 import math
-from matplotlib import pyplot as plt
 import numpy as np
 from icecream import ic
 
 
 class GridMap(object):
-    """
-    The Map class stores an occupancy grid as a two dimensional
-    numpy array.
-
-    Public instance variables:
-
-        width      --  Number of columns in the occupancy grid.
-        height     --  Number of rows in the occupancy grid.
-        resolution --  Width of each grid square in meters.
-        origin_x   --  Position of the grid cell (0,0) in
-        origin_y   --    in the map coordinate system.
-        grid       --  numpy array with height rows and width columns.
-
-
-    Note that x increases with increasing column number and y increases
-    with increasing row number.
-    """
-
     def __init__(self, origin_x=0, origin_y=0, resolution=0.25, width=40, height=40):
         self.origin_x = origin_x
         self.origin_y = origin_y
@@ -38,7 +19,6 @@ class GridMap(object):
             "occupied": math.log(0.65 / 0.35),
             "unknown": math.log(1),
         }
-        # ic(self.cost)
 
     def bresenham(self, start, end):
         """
@@ -140,16 +120,3 @@ class GridMap(object):
                 self.setCell(z, self.cost["free"], min_value=self.thresholdFree)
 
             self.setCell(idx, self.cost["occupied"], max_value=self.thresholdOccupied)
-
-    def show(self):
-        """Display the grid."""
-        # ic(self.grid)
-        plt.imshow(self.grid, cmap="PiYG_r")
-
-        plt.clim(-100, 100)
-        plt.gca().set_xticks(np.arange(-0.5, 0.1, 1), minor=True)
-        plt.gca().set_yticks(np.arange(-0.5, 0.1, 1), minor=True)
-        plt.grid(True, which="minor", color="w", linewidth=0.6, alpha=0.5)
-        plt.colorbar()
-
-        plt.show()
